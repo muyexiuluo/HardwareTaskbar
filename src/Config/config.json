@@ -1,0 +1,9 @@
+{
+  "RefreshInterval": 1000,
+  "ShowGpu0": true,
+  "ShowGpu1": true,
+  "ShowCpu": true,
+  "ShowNetwork": true,
+  "FontSize": 14.0,
+  "StartWithWindows": false
+}

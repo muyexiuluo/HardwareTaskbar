@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- 鐢?澶ч緳铏?浜?2026-09-04 鍒涘缓锛岀敤浜?HardwareTaskbar 绋嬪簭娓呭崟锛?     CPU 娓╁害璇诲彇锛圠HM/PawnIO ring0 MSR锛夎姹傜鐞嗗憳鏉冮檺锛屾晠澹版槑 asInvoker銆?     娉ㄦ剰锛歑ML 澹版槑蹇呴』浣嶄簬绗?1 琛岋紝娉ㄩ噴鍦ㄥ叾鍚庯紙SxS 瑙ｆ瀽鍣ㄤ笉璁ゅ０鏄庡墠鐨勬敞閲婏紝鎶?SxS 閿欒 59锛夈€?-->
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+  <assemblyIdentity version="1.0.0.0" name="HardwareTaskbar.app"/>
+
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+    <security>
+      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+        <!-- 蹇呴渶锛欳PU 娓╁害锛圠ibreHardwareMonitor/PawnIO锛夐渶瑕?ring0 MSR 璁块棶 -->
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+
+  <!-- Win11 DPI 鑷€傚簲锛堢鍥涢樁娈垫偓娴獥鍙ｉ渶瑕?Per-Monitor V2锛?-->
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+    </windowsSettings>
+  </application>
+
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <!-- Windows 10 / 11 -->
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />
+    </application>
+  </compatibility>
+</assembly>
+

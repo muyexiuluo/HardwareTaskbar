@@ -1,0 +1,17 @@
+﻿# .NET 构建产物
+bin/
+obj/
+*.user
+
+# 运行日志
+launch-*.log
+tb_probe.log
+launch-error.log
+selftest.log
+
+# 用户配置（config.json 保留默认模板进库，本机改动不上传）
+config.json.orig
+
+# Windows 系统垃圾
+Thumbs.db
+Desktop.ini

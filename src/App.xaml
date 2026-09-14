@@ -1,0 +1,8 @@
+<Application x:Class="HardwareTaskbar.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+    <!-- 无 StartupUri：悬浮窗与托盘在 App 代码中手动创建（无边框、不抢焦点） -->
+    <Application.Resources>
+    </Application.Resources>
+</Application>

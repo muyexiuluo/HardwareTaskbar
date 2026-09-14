@@ -1,0 +1,55 @@
+<!-- 由 大龙虾 于 2026-09-04 创建，用于 Win11 硬件任务栏监控工具（第四阶段起为 WPF） -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PlatformTarget>x64</PlatformTarget>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>HardwareTaskbar</AssemblyName>
+    <RootNamespace>HardwareTaskbar</RootNamespace>
+    <ApplicationManifest>App.manifest</ApplicationManifest>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- UseWindowsForms + UseWPF 同时开启时，System.Windows.Forms 隐式 using 会与 WPF 类型歧义
+         （MessageBox/Point/Timer 等），移除它；需要 WinForms 类型处显式 using/全限定名。 -->
+    <Using Remove="System.Windows.Forms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
+    <PackageReference Include="System.Security.AccessControl" Version="6.0.0" />
+    <!-- LHM 0.9.6 net8.0 的运行时依赖：直接 Reference DLL 时传递依赖不生效，必须手动补齐 -->
+    <PackageReference Include="System.Threading.AccessControl" Version="8.0.0" />
+    <PackageReference Include="DiskInfoToolkit" Version="1.1.2" />
+    <PackageReference Include="HidSharp" Version="2.6.4" />
+    <PackageReference Include="BlackSharp.Core" Version="1.0.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- LHM 本地 net8.0 构建（v0.9.6 tag，修了 ArcticFanController 编译 bug +
+         System.Threading.AccessControl 10→8 版本适配）。
+         原 scripts\LibreHardwareMonitorLib.dll 是 net48 版，.NET 8 运行会
+         MissingMethodException: FileInfo.GetAccessControl。 -->
+    <Reference Include="LibreHardwareMonitorLib">
+      <HintPath>..\thirdparty\librehwmonitor\bin\Release\x64\net8.0\LibreHardwareMonitorLib.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 默认配置：发布到 exe 同级根目录（config.json 三件套之一） -->
+    <Content Include="Config\config.json" Link="config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>
