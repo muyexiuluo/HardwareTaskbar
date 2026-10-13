@@ -27,19 +27,31 @@ public static class AutostartService
         {
             // 先删后建，保证幂等
             DeleteQuietly(psi);
+            // 2026-09-23 修复：ArgumentList 每一项是独立 token（自动加引号），
+            // 带值参数必须拆成两项（/TN + 值），拼成 "/TN xxx" 单项会被 schtasks
+            // 当成不认识的参数名 → “无效参数/选项 - '/TN ...'”（C# 探针实锤）。
             psi.ArgumentList.Add("/Create");
             psi.ArgumentList.Add("/F");
-            psi.ArgumentList.Add($"/TN {TaskName}");
-            psi.ArgumentList.Add("/SC ONLOGON");
-            psi.ArgumentList.Add("/RU Administrators");
-            psi.ArgumentList.Add("/RL HIGHEST");
-            psi.ArgumentList.Add($"/TR \"\"{exePath}\"\"");
+            psi.ArgumentList.Add("/TN");
+            psi.ArgumentList.Add(TaskName);
+            psi.ArgumentList.Add("/SC");
+            psi.ArgumentList.Add("ONLOGON");
+            psi.ArgumentList.Add("/RU");
+            psi.ArgumentList.Add("Administrators");
+            psi.ArgumentList.Add("/RL");
+            psi.ArgumentList.Add("HIGHEST");
+            psi.ArgumentList.Add("/TR");
+            psi.ArgumentList.Add(exePath);
+            // 建计划任务需要管理员权限（本程序 manifest 要求 requireAdministrator，
+            // 但普通进程启动时 schtasks 本身仍需提权），runas 弹一次 UAC
+            psi.Verb = "runas";
         }
         else
         {
             psi.ArgumentList.Add("/Delete");
             psi.ArgumentList.Add("/F");
-            psi.ArgumentList.Add($"/TN {TaskName}");
+            psi.ArgumentList.Add("/TN");
+            psi.ArgumentList.Add(TaskName);
         }
 
         using var p = Process.Start(psi) ?? throw new SystemException("无法启动 schtasks");
@@ -60,7 +72,8 @@ public static class AutostartService
                 RedirectStandardOutput = true
             };
             psi.ArgumentList.Add("/Query");
-            psi.ArgumentList.Add($"/TN {TaskName}");
+            psi.ArgumentList.Add("/TN");
+            psi.ArgumentList.Add(TaskName);
             using var p = Process.Start(psi)!;
             p.WaitForExit(10000);
             string outp = p.StandardOutput.ReadToEnd();
@@ -85,7 +98,8 @@ public static class AutostartService
             };
             psi.ArgumentList.Add("/Delete");
             psi.ArgumentList.Add("/F");
-            psi.ArgumentList.Add($"/TN {TaskName}");
+            psi.ArgumentList.Add("/TN");
+            psi.ArgumentList.Add(TaskName);
             using var p = Process.Start(psi);
             p?.WaitForExit(5000);
         }

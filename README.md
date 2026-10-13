@@ -6,6 +6,8 @@ Windows 11 硬件任务栏监控悬浮窗：把 CPU / 双显卡（温度、显�
 - 硬件读取：[LibreHardwareMonitorLib](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) 0.9.6 net8.0 本地构建（`thirdparty/librehwmonitor`，含 2 处补丁：ArcticFanController 编译修复 + System.Threading.AccessControl 10→8 适配），网络速率用 PDH
 - 权限：读取 CPU 温度需要 ring0 MSR 访问，**程序以管理员权限运行**（App.manifest 声明 requireAdministrator）
 
+![示例：任务栏右侧的实时硬件数据](screenshot.png)
+
 ## 目录结构
 
 ```
@@ -43,6 +45,7 @@ dotnet publish -c Release -r win-x64 --self-contained false -o ..
 | ShowNetwork | 显示网络速率 |
 | FontSize | 字号 |
 | StartWithWindows | 开机自启（以计划任务真实状态为准） |
+| HideOnFullscreen | 全屏时隐藏：前台窗口覆盖整屏（游戏/播放器 F/全屏应用）时自动隐藏，退出全屏自动恢复；桌面本身不算全屏 |
 
 ## 许可证
 

@@ -21,6 +21,9 @@ public sealed class AppSettings
 
     /// <summary>开机自启（计划任务，非注册表 Run 键）。</summary>
     public bool StartWithWindows { get; set; }
+
+    /// <summary>全屏时隐藏：任何软件/浏览器/游戏全屏（前台窗口覆盖整屏）时，悬浮窗自动隐藏，退出全屏自动恢复。默认 false。</summary>
+    public bool HideOnFullscreen { get; set; }
 }
 
 /// <summary>

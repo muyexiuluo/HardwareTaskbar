@@ -91,6 +91,7 @@ public partial class App : System.Windows.Application
             {
                 if (_monitor != null) _monitor.RefreshIntervalMs = cfg.RefreshInterval;
                 _vm?.ApplySettings(cfg);
+                if (_window != null) _window.HideOnFullscreen = cfg.HideOnFullscreen; // 2026-09-23：全屏隐藏开关注入（150ms 轮询消费）
                 _settingsWindow?.SyncFrom(cfg);
             });
 
@@ -98,6 +99,7 @@ public partial class App : System.Windows.Application
         _vm = new MainViewModel();
         _vm.ApplySettings(_config.Current);
         _window = new MainWindow(_vm);
+        _window.HideOnFullscreen = _config.Current.HideOnFullscreen; // 2026-09-23：初始值（配置变化时另行注入）
         // 文字右键菜单接线（2026-09-13：与托盘共用同一套状态/入口）
         _window.OpenSettingsRequested += () => Dispatcher.BeginInvoke(new Action(OpenSettings));
         _window.ExitRequested += () => Dispatcher.BeginInvoke(new Action(ExitApp));
@@ -116,10 +118,13 @@ public partial class App : System.Windows.Application
                 _lastState = state;
                 _vm?.Update(state);
 
-                // 首帧真实数据到达 → 完整重显脉冲（2026-09-04 修复"启动不显示数据"：
-                // DWM 对任务栏区域窗口的首次合成发生在占位符阶段，文本更新后不再合成，
-                // 数据永远停在 "--"；完整 WPF Hide→Show→Activate 才触发重新合成
-                // ——与手动"暂停→取消暂停"能恢复是同一原理）
+                // 首帧真实数据到达 → 完整重显脉冲（2026-09-04 原始语义，2026-09-23 回滚恢复：
+                // PulseShow 内部 Hide()→Show() 是顶层操作，若在硬件 tick（1s）上每次都跑，
+                // 会在用户弹右键菜单的瞬间把整个顶层弹窗（含菜单）卸载 = "菜单秒没"事故之源。
+                // 所以只在首帧跑一次；DWM 对任务栏区域窗口首次合成发生在占位符阶段，
+                // 文本更新后不再合成，数据永远停在 "--"，完整 Hide→Show→Activate 才重新合成
+                // ——与手动"暂停→取消暂停"能恢复是同一原理）。
+                // 启动不显示由 Reposition 的 150ms 补显兜底（ShouldBeHidden 判定，不与全屏隐藏打架）。
                 if (_lastState != null && _firstFrameLogged == false)
                 {
                     _firstFrameLogged = true;
@@ -431,8 +436,14 @@ public partial class App : System.Windows.Application
         _lastExplorerPid = pid;
 
         // Explorer 在 → 确保悬浮窗可见（全屏自动隐藏态除外：那是预期隐藏，不是异常）
-        if (_window is { Visibility: Visibility.Hidden } && _window.TaskbarVisible && !_stealth)
-            _window.Show();
+        // 2026-09-23：统一走 ShouldBeHidden（任务栏收起 OR 全屏隐藏），用反射避免 MainWindow 私有属性跨类访问
+        if (_window is { Visibility: Visibility.Hidden } && !_stealth)
+        {
+            bool shouldHide = (bool)(typeof(MainWindow).GetProperty("ShouldBeHidden",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                ?.GetValue(_window) ?? false);
+            if (!shouldHide) _window.Show();
+        }
     }
 
     private void RebuildTrayIcon()

@@ -5,5 +5,6 @@
   "ShowCpu": true,
   "ShowNetwork": true,
   "FontSize": 14.0,
-  "StartWithWindows": false
+  "StartWithWindows": true,
+  "HideOnFullscreen": true
 }

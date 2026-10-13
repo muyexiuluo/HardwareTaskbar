@@ -21,7 +21,8 @@ public partial class SettingsWindow : Window
             ShowCpu = current.ShowCpu,
             ShowNetwork = current.ShowNetwork,
             FontSize = current.FontSize,
-            StartWithWindows = current.StartWithWindows
+            StartWithWindows = current.StartWithWindows,
+            HideOnFullscreen = current.HideOnFullscreen
         };
         LoadToControls();
     }
@@ -34,6 +35,7 @@ public partial class SettingsWindow : Window
         ChkCpu.IsChecked = _draft.ShowCpu;
         ChkNet.IsChecked = _draft.ShowNetwork;
         SldFont.Value = _draft.FontSize;
+        ChkHideOnFullscreen.IsChecked = _draft.HideOnFullscreen; // 2026-09-23：全屏时隐藏
         // 2026-09-13：开机自启改复选框，状态以计划任务实际状态为准（AutostartService.IsEnabled）
         ChkAutostart.IsChecked = AutostartService.IsEnabled();
         _draft.StartWithWindows = ChkAutostart.IsChecked == true;
@@ -49,6 +51,7 @@ public partial class SettingsWindow : Window
         _draft.ShowNetwork = current.ShowNetwork;
         _draft.FontSize = current.FontSize;
         _draft.StartWithWindows = current.StartWithWindows;
+        _draft.HideOnFullscreen = current.HideOnFullscreen; // 2026-09-23：全屏时隐藏
         LoadToControls();
     }
 
@@ -66,6 +69,7 @@ public partial class SettingsWindow : Window
         _draft.ShowCpu = ChkCpu.IsChecked == true;
         _draft.ShowNetwork = ChkNet.IsChecked == true;
         _draft.FontSize = SldFont.Value;
+        _draft.HideOnFullscreen = ChkHideOnFullscreen.IsChecked == true; // 2026-09-23：全屏时隐藏
 
         // 2026-09-13 老大要求：开机自启只在点「应用」时生效
         // 勾选 = 建计划任务，取消勾选 = 删计划任务；与当前状态相同则不动（幂等）
@@ -89,6 +93,4 @@ public partial class SettingsWindow : Window
         App.Instance?.ApplyConfig(_draft);   // 立即生效（内存 + 写 config.json）
         LoadToControls();
     }
-
-    private void BtnClose_Click(object sender, RoutedEventArgs e) => Close();
 }

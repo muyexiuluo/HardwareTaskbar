@@ -10,6 +10,7 @@
 //   - 保留：250ms 轮询任务栏矩形、Win+D 最小化恢复、WM_DISPLAYCHANGE、跨屏 DPI 换算
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Input;
@@ -50,6 +51,13 @@ public partial class MainWindow : Window
 
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     private static extern IntPtr FindWindowEx(IntPtr parent, IntPtr childAfter, string? lpszClass, string? lpszWindow);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    // 取窗口类名（2026-10-13：全屏判定要排除桌面 shell 窗口）
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
 
     [DllImport("user32.dll")]
     private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
@@ -144,6 +152,48 @@ public partial class MainWindow : Window
 
 
 
+
+    // ---- "全屏时隐藏"（2026-09-23 老大要求）：前台窗口覆盖整个其所在显示器 → 视为全屏。
+    //      与 TaskbarVisible 组成 OR 条件驱动隐藏；无边框全屏/播放器 F/多数游戏全覆盖。
+    //      ±2px 容差防 DPI 取整误差；只比窗口所在显示器（多显示器不误判）。----
+    /// <summary>当前前台窗口是否处于全屏（矩形 ⊇ 其所在显示器矩形，±2px 容差）。</summary>
+    public bool FullscreenActive
+    {
+        get
+        {
+            IntPtr fg = GetForegroundWindow();
+            if (fg == IntPtr.Zero) return false;
+            // 自己（透明窗口）在前台时不算全屏，省一次矩形比较
+            var own = new WindowInteropHelper(this).Handle;
+            if (fg == own) return false;
+            // 裸桌面（开机啥都没开/Win+D）时前台窗口是桌面 shell 本身
+            // （Progman，或其 WorkerW 子层），它的矩形 = 整个虚拟桌面，永远 ⊇ 屏幕，
+            // 不加排除会导致空桌面被误判成全屏、面板被藏掉（2026-10-13 老大拍板修）。
+            var cls = new StringBuilder(64);
+            if (GetClassName(fg, cls, cls.Capacity) > 0)
+            {
+                string c = cls.ToString();
+                if (c == "Progman" || c == "WorkerW") return false;
+            }
+            if (!GetWindowRect(fg, out RECT fr)) return false;
+            IntPtr mon = MonitorFromWindow(fg, 2); // MONITOR_DEFAULTTONEAREST：窗口所在显示器
+            if (mon == IntPtr.Zero) return false;
+            MONITORINFO mi = new();
+            mi.cbSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf(typeof(MONITORINFO));
+            if (!GetMonitorInfo(mon, ref mi)) return false;
+            RECT pr = mi.rcMonitor;
+            const int tol = 2; // DPI 取整容差
+            return fr.Left <= pr.Left + tol && fr.Top <= pr.Top + tol &&
+                   fr.Right >= pr.Right - tol && fr.Bottom >= pr.Bottom - tol;
+        }
+    }
+
+    /// <summary>"全屏时隐藏"配置开关（由 App 在配置变化时注入，150ms 轮询消费）。</summary>
+    public bool HideOnFullscreen { get; set; }
+
+    /// <summary>应处于隐藏态的统一判定（跟随任务栏 OR 全屏隐藏）。
+    /// Reposition/BumpTopmost/PulseShow/App 看门狗共用，避免多处判断漂移。</summary>
+    private bool ShouldBeHidden => !TaskbarVisible || (HideOnFullscreen && FullscreenActive);
     public MainWindow(MainViewModel vm)
     {
         InitializeComponent();
@@ -240,8 +290,8 @@ public partial class MainWindow : Window
         // 跟随任务栏生死（老大 2026-09-08 定案）：本窗依附任务栏显示，
         // 任务栏在（可见）→ 显示；任务栏收起（自动隐藏，全屏时系统会收起任务栏）→ 藏起来。
         // 不枚举任何应用窗口（之前 Z 序/前台窗口两版都被 Win11 常驻全屏层坑过）。
-        // 任务栏不在屏幕上（自动隐藏/全屏收起：不可见，或矩形被推到屏外）→ 隐藏
-        if (!IsWindowVisible(taskbar) || !TaskbarVisible)
+        // 不在屏幕上 → 隐藏（2026-09-23：应隐藏 = 任务栏收起 OR "全屏时隐藏"开启且前台窗口全屏）
+        if (ShouldBeHidden)
         {
             if (Visibility == Visibility.Visible)
             {
@@ -358,8 +408,8 @@ public partial class MainWindow : Window
         if (h == IntPtr.Zero) return;
         if (Visibility != Visibility.Visible)
         {
-            // 被隐藏：任务栏不可见时是预期隐藏（全屏/自动隐藏），不恢复；否则恢复显示
-            if (TaskbarVisible)
+            // 被隐藏：预期隐藏（任务栏收起/全屏隐藏）时不恢复；否则恢复显示
+            if (!ShouldBeHidden)
             {
                 if (WindowState == WindowState.Minimized)
                     WindowState = WindowState.Normal;
@@ -375,7 +425,7 @@ public partial class MainWindow : Window
     /// 必须一次完整重显才合成（与手动"暂停→取消"同原理）。启动后由 App 首帧调用两次。</summary>
     public void PulseShow()
     {
-        if (_stealth || !TaskbarVisible) return; // 任务栏收起时不脉冲重显（与跟随逻辑一致）
+        if (_stealth || ShouldBeHidden) return; // 任务栏收起/全屏隐藏时不脉冲重显（与跟随逻辑一致）
         if (WindowState == WindowState.Minimized)
             WindowState = WindowState.Normal;
         Hide();
